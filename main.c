@@ -49,27 +49,6 @@ get_windows(xcb_connection_t *con, xcb_window_t w, xcb_window_t **l)
     return childnum;
 }
 
-int
-mapped(xcb_connection_t *con, xcb_window_t w)
-{
-    int ms;
-    xcb_get_window_attributes_cookie_t c;
-    xcb_get_window_attributes_reply_t *r;
-
-    c = xcb_get_window_attributes(con, w);
-    r = xcb_get_window_attributes_reply(con, c, NULL);
-
-    if (r == NULL) {
-	return 0;
-    }
-
-    ms = r->map_state;
-
-    free(r);
-
-    return ms == XCB_MAP_STATE_VIEWABLE;
-}
-
 void
 print_window_name(xcb_window_t w)
 {
