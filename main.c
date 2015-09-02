@@ -24,7 +24,6 @@ get_screen(xcb_connection_t *con, xcb_screen_t **scr)
     }
 }
 
-
 int
 get_windows(xcb_connection_t *con, xcb_window_t w, xcb_window_t **l)
 {
@@ -52,7 +51,6 @@ get_windows(xcb_connection_t *con, xcb_window_t w, xcb_window_t **l)
 void
 print_window_name(xcb_window_t w)
 {
-    // Window property variables
     xcb_get_property_cookie_t cookie;
     xcb_get_property_reply_t *r;
 
@@ -85,6 +83,7 @@ ignore(xcb_connection_t *con, xcb_window_t w)
 	or = r->override_redirect;
 
 	free(r);
+	
 	return or;
 }
 
