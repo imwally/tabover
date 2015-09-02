@@ -24,6 +24,67 @@ get_screen(xcb_connection_t *con, xcb_screen_t **scr)
     }
 }
 
+char *
+get_window_name(xcb_window_t w)
+{
+    xcb_get_property_cookie_t cookie;
+    xcb_get_property_reply_t *r;
+    char *name;
+
+    cookie = xcb_get_property(conn, 0, w,
+			      XCB_ATOM_WM_NAME,
+			      XCB_ATOM_STRING,
+			      0L, 32L);
+    r = xcb_get_property_reply(conn, cookie, NULL);
+
+    if (r) {
+	name = (char *) xcb_get_property_value(r);
+    }
+
+    free(r);
+
+return name;
+}
+
+xcb_atom_t
+get_atom(char *name)
+{
+    xcb_intern_atom_cookie_t c;
+    xcb_intern_atom_reply_t *r;
+    xcb_atom_t atom;
+        
+    c = xcb_intern_atom(conn, 0, strlen(name), name);
+    r = xcb_intern_atom_reply(conn, c, NULL);
+    atom = r->atom;
+
+    free(r);
+
+    return atom;
+}    
+
+uint32_t
+get_window_state(xcb_window_t w)
+{
+    uint32_t result = 0;
+    xcb_get_property_cookie_t c;
+    xcb_get_property_reply_t *r;
+    
+    xcb_atom_t atom = get_atom("WM_STATE");
+    
+    c = xcb_get_property(conn, 0, w, atom, atom, 0L, 2L);
+    r = xcb_get_property_reply(conn, c, NULL);
+
+    if (r) {
+	if (r->format == 32 && r->length == 2) {
+	    result = *((uint32_t *)xcb_get_property_value(r));
+	}
+    }
+	
+    free(r);
+
+    return result;
+}
+
 int
 get_windows(xcb_connection_t *con, xcb_window_t w, xcb_window_t **l)
 {
@@ -36,78 +97,41 @@ get_windows(xcb_connection_t *con, xcb_window_t w, xcb_window_t **l)
     if (r == NULL) {
 	errx(1, "0x%08x: no such window", w);
     }
-
-    *l = malloc(sizeof(xcb_window_t) * r->children_len);
-    memcpy(*l, xcb_query_tree_children(r),
-	   sizeof(xcb_window_t) * r->children_len);
-
+    
     childnum = r->children_len;
+
+    *l = malloc(sizeof(xcb_window_t) * childnum);
+    memcpy(*l, xcb_query_tree_children(r),
+	   sizeof(xcb_window_t) * childnum);
 
     free(r);
 
     return childnum;
 }
 
-void
-print_window_name(xcb_window_t w)
-{
-    xcb_get_property_cookie_t cookie;
-    xcb_get_property_reply_t *r;
-
-    cookie = xcb_get_property(conn, 0, w,
-			      XCB_ATOM_WM_NAME,
-			      XCB_ATOM_STRING,
-			      0L, 32L);
-    r = xcb_get_property_reply(conn, cookie, NULL);
-
-    if (r) {
-	printf("%s\n", (char *) xcb_get_property_value(r));
-    }
-
-    free(r);
-}
-
-int
-ignore(xcb_connection_t *con, xcb_window_t w)
-{
-	int or;
-	xcb_get_window_attributes_cookie_t c;
-	xcb_get_window_attributes_reply_t  *r;
-
-	c = xcb_get_window_attributes(con, w);
-	r = xcb_get_window_attributes_reply(con, c, NULL);
-
-	if (r == NULL)
-		return 0;
-
-	or = r->override_redirect;
-
-	free(r);
-	
-	return or;
-}
-
 int
 main(int argc, char **argv)
 {
+    int i, wn;
+    uint32_t state;
+    xcb_window_t *wc;
 
     init_xcb(&conn);
     get_screen(conn, &scrn);
 
-    int i, wn;
-    xcb_window_t *wc;
-
     wn = get_windows(conn, scrn->root, &wc);
 
     if (wc == NULL) {
-	errx(1, "0x%08x: unable to retreive children", scrn->root);
+	errx(1, "0x%80x: unable to retrieve children", scrn->root);
     }
 
     for (i = 0; i < wn; i++) {
-	if (!ignore(conn, wc[i])) {
-	    print_window_name(wc[i]);
+	state = get_window_state(wc[i]);
+	if (state > 0) {
+	    printf("%s\n", get_window_name(wc[i]));
 	}
     }
 
     free(wc);
+
 }
