@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <xcb/xcb.h>
+#include <xcb/xcb_atom.h>
 
 static xcb_connection_t *conn;
 static xcb_screen_t *scrn;
@@ -43,7 +44,7 @@ get_window_name(xcb_window_t w)
 
     free(r);
 
-return name;
+    return name;
 }
 
 xcb_atom_t
@@ -62,76 +63,48 @@ get_atom(char *name)
     return atom;
 }    
 
-uint32_t
-get_window_state(xcb_window_t w)
+int
+get_client_list(xcb_window_t w, xcb_window_t **list)
 {
-    uint32_t result = 0;
     xcb_get_property_cookie_t c;
     xcb_get_property_reply_t *r;
+    xcb_atom_t atom;
+    int wn;
+
+    atom = get_atom("_NET_CLIENT_LIST");
     
-    xcb_atom_t atom = get_atom("WM_STATE");
-    
-    c = xcb_get_property(conn, 0, w, atom, atom, 0L, 2L);
+    c = xcb_get_property(conn, 0, w, atom, XCB_ATOM_WINDOW, 0L, 32L);
     r = xcb_get_property_reply(conn, c, NULL);
 
     if (r) {
-	if (r->format == 32 && r->length == 2) {
-	    result = *((uint32_t *)xcb_get_property_value(r));
-	}
-    }
-	
-    free(r);
-
-    return result;
-}
-
-int
-get_windows(xcb_connection_t *con, xcb_window_t w, xcb_window_t **l)
-{
-    uint32_t childnum = 0;
-    xcb_query_tree_cookie_t c;
-    xcb_query_tree_reply_t *r;
-
-    c = xcb_query_tree(con, w);
-    r = xcb_query_tree_reply(con, c, NULL);
-    if (r == NULL) {
-	errx(1, "0x%08x: no such window", w);
+	*list = malloc(sizeof(xcb_window_t) * r->length);
+	memcpy(*list, xcb_get_property_value(r), sizeof(xcb_window_t) * r->length);
+	wn = r->length;
     }
     
-    childnum = r->children_len;
-
-    *l = malloc(sizeof(xcb_window_t) * childnum);
-    memcpy(*l, xcb_query_tree_children(r),
-	   sizeof(xcb_window_t) * childnum);
-
     free(r);
 
-    return childnum;
+    return wn;
 }
 
 int
 main(int argc, char **argv)
 {
-    int i, wn;
-    uint32_t state;
-    xcb_window_t *wc;
-
+    int wn, i;
+    xcb_window_t *list;
+    
+    // Setup connection to X and grab screen
     init_xcb(&conn);
     get_screen(conn, &scrn);
 
-    wn = get_windows(conn, scrn->root, &wc);
+    // Get a list of windows via _NET_CLIENT_LIST of the root screen
+    wn = get_client_list(scrn->root, &list);
 
-    if (wc == NULL) {
-	errx(1, "0x%80x: unable to retrieve children", scrn->root);
-    }
-
+    // Iterate of number of windows and print the name
     for (i = 0; i < wn; i++) {
-	state = get_window_state(wc[i]);
-	if (state > 0) {
-	    printf("%s\n", get_window_name(wc[i]));
-	}
+	printf("%s\n", get_window_name(list[i]));
     }
 
-    free(wc);
+    free(list);
 
 }
