@@ -28,15 +28,15 @@ get_screen(xcb_connection_t *con, xcb_screen_t **scr)
 char *
 get_window_name(xcb_window_t w)
 {
-    xcb_get_property_cookie_t cookie;
+    xcb_get_property_cookie_t c;
     xcb_get_property_reply_t *r;
     char *name;
 
-    cookie = xcb_get_property(conn, 0, w,
-			      XCB_ATOM_WM_NAME,
-			      XCB_ATOM_STRING,
-			      0L, 32L);
-    r = xcb_get_property_reply(conn, cookie, NULL);
+    c = xcb_get_property(conn, 0, w,
+			 XCB_ATOM_WM_NAME,
+			 XCB_ATOM_STRING,
+			 0L, 32L);
+    r = xcb_get_property_reply(conn, c, NULL);
 
     if (r) {
 	name = (char *) xcb_get_property_value(r);
@@ -64,7 +64,7 @@ get_atom(char *name)
 }    
 
 int
-get_client_list(xcb_window_t w, xcb_window_t **list)
+get_client_list(xcb_window_t w, xcb_window_t **windows)
 {
     xcb_get_property_cookie_t c;
     xcb_get_property_reply_t *r;
@@ -73,12 +73,15 @@ get_client_list(xcb_window_t w, xcb_window_t **list)
 
     atom = get_atom("_NET_CLIENT_LIST");
     
-    c = xcb_get_property(conn, 0, w, atom, XCB_ATOM_WINDOW, 0L, 32L);
+    c = xcb_get_property(conn, 0, w,
+			 atom,
+			 XCB_ATOM_WINDOW,
+			 0L, 32L);
     r = xcb_get_property_reply(conn, c, NULL);
 
     if (r) {
-	*list = malloc(sizeof(xcb_window_t) * r->length);
-	memcpy(*list, xcb_get_property_value(r), sizeof(xcb_window_t) * r->length);
+	*windows = malloc(sizeof(xcb_window_t) * r->length);
+	memcpy(*windows, xcb_get_property_value(r), sizeof(xcb_window_t) * r->length);
 	wn = r->length;
     }
     
@@ -87,24 +90,36 @@ get_client_list(xcb_window_t w, xcb_window_t **list)
     return wn;
 }
 
+void
+activate_window(xcb_window_t root, xcb_window_t w) {
+
+    xcb_atom_t atom;
+    atom = get_atom("_NET_ACTIVE_WINDOW");
+	
+    xcb_change_property(conn, XCB_PROP_MODE_REPLACE,
+			root, atom,
+			XCB_ATOM_WINDOW,
+			32, 1, &w);
+}
+
 int
 main(int argc, char **argv)
 {
     int wn, i;
-    xcb_window_t *list;
+    xcb_window_t *windows;
     
     // Setup connection to X and grab screen
     init_xcb(&conn);
     get_screen(conn, &scrn);
 
     // Get a list of windows via _NET_CLIENT_LIST of the root screen
-    wn = get_client_list(scrn->root, &list);
+    wn = get_client_list(scrn->root, &windows);
 
     // Iterate of number of windows and print the name
     for (i = 0; i < wn; i++) {
-	printf("%s\n", get_window_name(list[i]));
+	printf("%s\n", get_window_name(windows[i]));
     }
+    
 
-    free(list);
-
+    free(windows);
 }
