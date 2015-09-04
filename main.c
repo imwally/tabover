@@ -115,7 +115,7 @@ main(int argc, char **argv)
     // Get a list of windows via _NET_CLIENT_LIST of the root screen
     wn = get_client_list(scrn->root, &windows);
 
-    // Iterate of number of windows and print the name
+    // Iterate over number of windows and print the name
     for (i = 0; i < wn; i++) {
 	printf("%s\n", get_window_name(windows[i]));
     }
