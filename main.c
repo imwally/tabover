@@ -122,4 +122,5 @@ main(int argc, char **argv)
     
 
     free(windows);
+    xcb_disconnect(conn);
 }
