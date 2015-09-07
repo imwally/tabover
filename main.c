@@ -90,18 +90,6 @@ get_client_list(xcb_window_t w, xcb_window_t **windows)
     return wn;
 }
 
-void
-activate_window(xcb_window_t root, xcb_window_t w) {
-
-    xcb_atom_t atom;
-    atom = get_atom("_NET_ACTIVE_WINDOW");
-	
-    xcb_change_property(conn, XCB_PROP_MODE_REPLACE,
-			root, atom,
-			XCB_ATOM_WINDOW,
-			32, 1, &w);
-}
-
 int
 main(int argc, char **argv)
 {
@@ -119,7 +107,6 @@ main(int argc, char **argv)
     for (i = 0; i < wn; i++) {
 	printf("%s\n", get_window_name(windows[i]));
     }
-    
 
     free(windows);
     xcb_disconnect(conn);
