@@ -64,6 +64,28 @@ get_atom(char *name)
 }    
 
 int
+get_desktop_of_window(xcb_window_t w)
+{
+    xcb_get_property_cookie_t c;
+    xcb_get_property_reply_t *r;
+    xcb_atom_t atom;
+    int desktop;
+
+    atom = get_atom("_NET_WM_DESKTOP");
+    
+    c = xcb_get_property(conn, 0, w,
+			 atom,
+			 XCB_ATOM_CARDINAL,
+			 0, 1);
+    r = xcb_get_property_reply(conn, c, NULL);
+    desktop = *((int *) xcb_get_property_value(r));
+
+    free(r);
+
+    return desktop;
+}
+
+int
 get_client_list(xcb_window_t w, xcb_window_t **windows)
 {
     xcb_get_property_cookie_t c;
@@ -105,7 +127,9 @@ main(int argc, char **argv)
 
     // Iterate over number of windows and print the name
     for (i = 0; i < wn; i++) {
-	printf("%s\n", get_window_name(windows[i]));
+	printf("%d: %s\n",
+	       get_desktop_of_window(windows[i]),
+	       get_window_name(windows[i]));
     }
 
     free(windows);
