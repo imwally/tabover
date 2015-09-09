@@ -11,6 +11,7 @@ void
 init_xcb(xcb_connection_t **con)
 {
     *con = xcb_connect(NULL, NULL);
+    
     if (xcb_connection_has_error(*con)) {
 	errx(1, "unable to connect to the X server");
     }
@@ -20,9 +21,25 @@ void
 get_screen(xcb_connection_t *con, xcb_screen_t **scr)
 {
     *scr = xcb_setup_roots_iterator(xcb_get_setup(con)).data;
+    
     if (*scr == NULL) {
 	errx(1, "unable to retrieve screen information");
     }
+}
+
+xcb_atom_t
+get_atom(char *name)
+{
+    xcb_intern_atom_cookie_t c;
+    xcb_intern_atom_reply_t *r;
+    xcb_atom_t atom;
+        
+    c = xcb_intern_atom(conn, 0, strlen(name), name);
+    r = xcb_intern_atom_reply(conn, c, NULL);
+    atom = r->atom;
+
+    free(r);
+    return atom;
 }
 
 char *
@@ -43,25 +60,8 @@ get_window_name(xcb_window_t w)
     }
 
     free(r);
-
     return name;
 }
-
-xcb_atom_t
-get_atom(char *name)
-{
-    xcb_intern_atom_cookie_t c;
-    xcb_intern_atom_reply_t *r;
-    xcb_atom_t atom;
-        
-    c = xcb_intern_atom(conn, 0, strlen(name), name);
-    r = xcb_intern_atom_reply(conn, c, NULL);
-    atom = r->atom;
-
-    free(r);
-
-    return atom;
-}    
 
 int
 get_desktop_of_window(xcb_window_t w)
@@ -81,7 +81,6 @@ get_desktop_of_window(xcb_window_t w)
     desktop = *((int *) xcb_get_property_value(r));
 
     free(r);
-
     return desktop;
 }
 
@@ -108,7 +107,6 @@ get_client_list(xcb_window_t w, xcb_window_t **windows)
     }
     
     free(r);
-
     return wn;
 }
 
@@ -116,7 +114,7 @@ int
 main(int argc, char **argv)
 {
     int wn, i;
-    xcb_window_t *windows;
+    xcb_window_t *windows, w;
     
     // Setup connection to X and grab screen
     init_xcb(&conn);
@@ -127,9 +125,9 @@ main(int argc, char **argv)
 
     // Iterate over number of windows and print the name
     for (i = 0; i < wn; i++) {
-	printf("%d: %s\n",
-	       get_desktop_of_window(windows[i]),
-	       get_window_name(windows[i]));
+	printf("%d: ", get_desktop_of_window(windows[i]));
+	printf("%s\n", get_window_name(windows[i]));
+	
     }
 
     free(windows);
