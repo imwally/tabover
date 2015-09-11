@@ -63,7 +63,7 @@ get_window_name(xcb_window_t w)
     return name;
 }
 
-int
+uint32_t
 get_desktop_of_window(xcb_window_t w)
 {
     xcb_get_property_cookie_t c;
@@ -110,11 +110,50 @@ get_client_list(xcb_window_t w, xcb_window_t **windows)
     return wn;
 }
 
+void
+send_client_message(xcb_connection_t *con, uint32_t mask,
+		    xcb_window_t destination, xcb_window_t window,
+		    xcb_atom_t message, const uint32_t data[])
+{
+    xcb_client_message_event_t event;
+
+    event.response_type = XCB_CLIENT_MESSAGE;
+    event.format = 32;
+    event.sequence = 0;
+    event.window = window;
+    event.type = message;
+
+    int i;
+    for (i = 0; i < 5; i++) {
+	event.data.data32[i] = data[i];
+    }
+
+    xcb_send_event(con, 0, destination, mask, (const char *) &event);
+
+}
+
+void
+switch_to_desktop(int desktop)
+{
+    uint32_t data[5] = {
+	(uint32_t)desktop, 0, 0, 0, 0
+    };
+    
+    uint32_t mask = (XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT
+		     | XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY);
+    send_client_message(conn, mask, scrn->root, scrn->root,
+			get_atom("_NET_CURRENT_DESKTOP"), data);
+
+    xcb_flush(conn);
+}
+    
+    
 int
 main(int argc, char **argv)
 {
-    int wn, i;
-    xcb_window_t *windows, w;
+    int desktop, wn, i;
+    xcb_window_t *windows;
+    char *wname;
     
     // Setup connection to X and grab screen
     init_xcb(&conn);
@@ -125,11 +164,15 @@ main(int argc, char **argv)
 
     // Iterate over number of windows and print the name
     for (i = 0; i < wn; i++) {
-	printf("%d: ", get_desktop_of_window(windows[i]));
-	printf("%s\n", get_window_name(windows[i]));
-	
+	desktop = get_desktop_of_window(windows[i]) + 1;
+	wname = get_window_name(windows[i]);
+	printf("%d: ", desktop);
+	printf("%s\n", wname);
     }
 
+    // Testing Desktop Switching
+    switch_to_desktop(desktop-1);
+    
     free(windows);
     xcb_disconnect(conn);
 }
