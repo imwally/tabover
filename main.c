@@ -1,3 +1,4 @@
+#include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -139,20 +140,37 @@ switch_to_desktop(int desktop)
 	(uint32_t)desktop, 0, 0, 0, 0
     };
     
-    uint32_t mask = (XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT
-		     | XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY);
+    uint32_t mask = (XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT |
+		     XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY);
+    
     send_client_message(conn, mask, scrn->root, scrn->root,
 			get_atom("_NET_CURRENT_DESKTOP"), data);
 
     xcb_flush(conn);
 }
+
+void
+focus_window(xcb_connection_t *conn, xcb_screen_t *screen, xcb_window_t window)
+{
+    uint32_t data[5] = {
+	2L, 0, 0, 0, 0
+    };
     
+    uint32_t mask = (XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT |
+		     XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY);
     
+    send_client_message(conn, mask, screen->root, window,
+			get_atom("_NET_ACTIVE_WINDOW"), data);
+
+       
+    xcb_flush(conn);
+}
+
 int
 main(int argc, char **argv)
 {
-    int desktop, wn, i;
     xcb_window_t *windows;
+    int desktop, wn, i;
     char *wname;
     
     // Setup connection to X and grab screen
@@ -169,9 +187,6 @@ main(int argc, char **argv)
 	printf("%d: ", desktop);
 	printf("%s\n", wname);
     }
-
-    // Testing Desktop Switching
-    switch_to_desktop(desktop-1);
     
     free(windows);
     xcb_disconnect(conn);
