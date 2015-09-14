@@ -44,7 +44,28 @@ get_atom(char *name)
 }
 
 char *
-get_window_name(xcb_window_t w)
+window_class(xcb_window_t w)
+{
+    xcb_get_property_cookie_t c;
+    xcb_get_property_reply_t *r;
+    char *class;
+
+    c = xcb_get_property(conn, 0, w,
+			 XCB_ATOM_WM_CLASS,
+			 XCB_ATOM_STRING,
+			 0L, 32L);
+    r = xcb_get_property_reply(conn, c, NULL);
+
+    if (r) {
+	class = (char *) xcb_get_property_value(r);
+    }
+
+    free(r);
+    return class;
+}
+
+char *
+window_name(xcb_window_t w)
 {
     xcb_get_property_cookie_t c;
     xcb_get_property_reply_t *r;
@@ -65,7 +86,7 @@ get_window_name(xcb_window_t w)
 }
 
 uint32_t
-get_desktop_of_window(xcb_window_t w)
+desktop_of_window(xcb_window_t w)
 {
     xcb_get_property_cookie_t c;
     xcb_get_property_reply_t *r;
@@ -86,7 +107,7 @@ get_desktop_of_window(xcb_window_t w)
 }
 
 int
-get_client_list(xcb_window_t w, xcb_window_t **windows)
+client_list(xcb_window_t w, xcb_window_t **windows)
 {
     xcb_get_property_cookie_t c;
     xcb_get_property_reply_t *r;
@@ -170,24 +191,23 @@ int
 main(int argc, char **argv)
 {
     xcb_window_t *windows;
-    int desktop, wn, i;
-    char *wname;
+    char *wname, *wclass;
+    int wn, i;
     
     // Setup connection to X and grab screen
     init_xcb(&conn);
     get_screen(conn, &scrn);
 
     // Get a list of windows via _NET_CLIENT_LIST of the root screen
-    wn = get_client_list(scrn->root, &windows);
-
-    // Iterate over number of windows and print the name
-    for (i = 0; i < wn; i++) {
-	desktop = get_desktop_of_window(windows[i]) + 1;
-	wname = get_window_name(windows[i]);
-	printf("%d: ", desktop);
-	printf("%s\n", wname);
-    }
+    wn = client_list(scrn->root, &windows);
     
+    // Iterate over number of windows and print the class and name
+    for (i = 0; i < wn; i++) {
+	wclass = window_class(windows[i]);
+	wname = window_name(windows[i]);
+	printf("[%s] %s\n", wclass, wname);
+    }
+
     free(windows);
     xcb_disconnect(conn);
 }
