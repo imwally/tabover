@@ -33,11 +33,14 @@ get_atom(char *name)
 {
     xcb_intern_atom_cookie_t c;
     xcb_intern_atom_reply_t *r;
-    xcb_atom_t atom;
+    xcb_atom_t atom = 0;
         
     c = xcb_intern_atom(conn, 0, strlen(name), name);
     r = xcb_intern_atom_reply(conn, c, NULL);
-    atom = r->atom;
+
+    if (r) {
+      atom = r->atom;
+    }
 
     free(r);
     return atom;
@@ -48,7 +51,7 @@ window_class(xcb_window_t w)
 {
     xcb_get_property_cookie_t c;
     xcb_get_property_reply_t *r;
-    char *class;
+    char *class = 0;
 
     c = xcb_get_property(conn, 0, w,
 			 XCB_ATOM_WM_CLASS,
@@ -69,7 +72,7 @@ window_name(xcb_window_t w)
 {
     xcb_get_property_cookie_t c;
     xcb_get_property_reply_t *r;
-    char *name;
+    char *name = 0;
 
     c = xcb_get_property(conn, 0, w,
 			 XCB_ATOM_WM_NAME,
@@ -90,8 +93,8 @@ desktop_of_window(xcb_window_t w)
 {
     xcb_get_property_cookie_t c;
     xcb_get_property_reply_t *r;
-    xcb_atom_t atom;
-    int desktop;
+    xcb_atom_t atom = 0;
+    int desktop = 0;
 
     atom = get_atom("_NET_WM_DESKTOP");
     
@@ -100,7 +103,10 @@ desktop_of_window(xcb_window_t w)
 			 XCB_ATOM_CARDINAL,
 			 0, 1);
     r = xcb_get_property_reply(conn, c, NULL);
-    desktop = *((int *) xcb_get_property_value(r));
+
+    if (r) {
+      desktop = *((int *) xcb_get_property_value(r));
+    }
 
     free(r);
     return desktop;
@@ -111,8 +117,8 @@ client_list(xcb_window_t w, xcb_window_t **windows)
 {
     xcb_get_property_cookie_t c;
     xcb_get_property_reply_t *r;
-    xcb_atom_t atom;
-    int wn;
+    xcb_atom_t atom = 0;
+    int wn = 0;
 
     atom = get_atom("_NET_CLIENT_LIST");
     
@@ -191,8 +197,8 @@ int
 main(int argc, char **argv)
 {
     xcb_window_t *windows;
-    char *wname, *wclass;
-    int wn, i;
+    char *wname, *wclass = 0;
+    int wn, i = 0;
     
     // Setup connection to X and grab screen
     init_xcb(&conn);
