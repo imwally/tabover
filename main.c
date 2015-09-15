@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <termios.h>
 #include <xcb/xcb.h>
 #include <xcb/xcb_atom.h>
 
@@ -194,10 +195,51 @@ focus_window(xcb_connection_t *conn, xcb_screen_t *screen, xcb_window_t window)
 }
 
 int
+unbuf_stdin() 
+{
+    struct termios t;
+    
+    if (-1 == tcgetattr(0, &t)) {
+	perror("tcgetattr");
+    }
+
+    t.c_lflag &= ~(ICANON | ECHO);
+    t.c_lflag |= ISIG;
+    t.c_iflag &= ~ICRNL;
+
+    t.c_cc[VMIN] = 1; 
+    t.c_cc[VTIME] = 0;
+
+    if (-1 == tcsetattr(0, TCSAFLUSH, &t)) {
+	return -1;
+    }
+    
+}
+
+void
+cycle_selection(int wn, int selection, xcb_window_t *windows)
+{
+    char *wname, *wclass;
+    char *select = "";
+    int i = 0;
+
+    for (i = 0; i < wn; i++) {
+	if (selection == i) {
+	    select = "\t";
+	}
+	wclass = window_class(windows[i]);
+	wname = window_name(windows[i]);
+	printf("%s[%s] %s\n", select, wclass, wname);
+	select = "";
+    }
+
+}
+
+int
 main(int argc, char **argv)
 {
     xcb_window_t *windows;
-    char *wname, *wclass = 0;
+    char ch = 0;
     int wn, i = 0;
     
     // Setup connection to X and grab screen
@@ -206,12 +248,29 @@ main(int argc, char **argv)
 
     // Get a list of windows via _NET_CLIENT_LIST of the root screen
     wn = client_list(scrn->root, &windows);
-    
-    // Iterate over number of windows and print the class and name
-    for (i = 0; i < wn; i++) {
-	wclass = window_class(windows[i]);
-	wname = window_name(windows[i]);
-	printf("[%s] %s\n", wclass, wname);
+
+    // Unbuffer terminal input to watch for key presses
+    if (unbuf_stdin()) {
+	perror("can't unbuffer terminal");
+    }
+
+    // Cycle window selection when TAB is pressed
+    while (1) {
+	ch = fgetc(stdin);
+	if (ch == '\t') {
+	    if (i == wn) {
+		i = 0;
+	    } 
+	    system("clear");
+	    cycle_selection(wn, ++i, windows);
+	}
+	if (ch == '`') {
+	    system("clear");
+	    cycle_selection(wn, --i, windows);
+	    if (i < 0) {
+		i = wn;
+	    }
+	}
     }
 
     free(windows);
