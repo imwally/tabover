@@ -6,8 +6,13 @@
 #include <xcb/xcb.h>
 #include <xcb/xcb_atom.h>
 
+#define DOWN 1
+#define UP  -1
+
 static xcb_connection_t *conn;
 static xcb_screen_t *scrn;
+static int selection = 0;
+
 
 void
 init_xcb(xcb_connection_t **con)
@@ -217,22 +222,34 @@ unbuf_stdin()
 }
 
 void
-cycle_selection(int wn, int selection, xcb_window_t *windows)
+cycle_selection(int direction,  xcb_window_t *windows)
 {
     char *wname, *wclass;
     char *select = "";
+    int wn = sizeof(windows);
     int i = 0;
 
+    // Clear terminal
+    system("clear");
+
+    // Increment or decrement selection based on direction
+    selection += direction;
+
+    if (selection >= wn) {
+	selection = 0;
+    }
+    if (selection < 0) {
+	selection = wn-1;
+    }
+        
     for (i = 0; i < wn; i++) {
 	if (selection == i) {
-	    select = "\t";
+	    printf("> ");
 	}
 	wclass = window_class(windows[i]);
 	wname = window_name(windows[i]);
-	printf("%s[%s] %s\n", select, wclass, wname);
-	select = "";
+	printf(" [%s] %s\n", wclass, wname);
     }
-
 }
 
 int
@@ -254,25 +271,20 @@ main(int argc, char **argv)
 	perror("can't unbuffer terminal");
     }
 
-    // Cycle window selection when TAB is pressed
+    // Cycle window selection when TAB or ` is pressed
     while (1) {
 	ch = fgetc(stdin);
-	if (ch == '\t') {
-	    if (i == wn) {
-		i = 0;
-	    } 
-	    system("clear");
-	    cycle_selection(wn, ++i, windows);
-	}
-	if (ch == '`') {
-	    system("clear");
-	    cycle_selection(wn, --i, windows);
-	    if (i < 0) {
-		i = wn;
-	    }
+	switch (ch) {
+	case '\t':
+	    cycle_selection(DOWN, windows);
+	    break;
+	case '`':
+	    cycle_selection(UP, windows);
+	    break;
 	}
     }
 
     free(windows);
     xcb_disconnect(conn);
 }
+
