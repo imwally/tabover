@@ -183,7 +183,7 @@ switch_to_desktop(int desktop)
 }
 
 void
-focus_window(xcb_connection_t *conn, xcb_screen_t *screen, xcb_window_t window)
+focus_window(xcb_window_t window)
 {
     uint32_t data[5] = {
 	2L, 0, 0, 0, 0
@@ -192,7 +192,7 @@ focus_window(xcb_connection_t *conn, xcb_screen_t *screen, xcb_window_t window)
     uint32_t mask = (XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT |
 		     XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY);
     
-    send_client_message(conn, mask, screen->root, window,
+    send_client_message(conn, mask, scrn->root, window,
 			get_atom("_NET_ACTIVE_WINDOW"), data);
 
        
@@ -222,18 +222,23 @@ unbuf_stdin()
 }
 
 void
-cycle_selection(int direction,  xcb_window_t *windows)
+cycle_selection(int direction,  xcb_window_t *windows, int select)
 {
     char *wname, *wclass;
-    char *select = "";
     int wn = sizeof(windows);
     int i = 0;
-
+    
     // Clear terminal
     system("clear");
 
     // Increment or decrement selection based on direction
     selection += direction;
+
+    if (select) {
+	int desktop = desktop_of_window(windows[selection]);
+	switch_to_desktop(desktop);
+	focus_window(windows[selection]);
+    }
 
     if (selection >= wn) {
 	selection = 0;
@@ -257,7 +262,7 @@ main(int argc, char **argv)
 {
     xcb_window_t *windows;
     char ch = 0;
-    int wn, i = 0;
+    int wn = 0;
     
     // Setup connection to X and grab screen
     init_xcb(&conn);
@@ -271,16 +276,22 @@ main(int argc, char **argv)
 	perror("can't unbuffer terminal");
     }
 
+    // Invocation
+    cycle_selection(0, windows, 0);
+    
     // Cycle window selection when TAB or ` is pressed
     while (1) {
 	ch = fgetc(stdin);
 	switch (ch) {
 	case '\t':
-	    cycle_selection(DOWN, windows);
+	    cycle_selection(DOWN, windows, 0);
 	    break;
 	case '`':
-	    cycle_selection(UP, windows);
+	    cycle_selection(UP, windows, 0);
 	    break;
+	case ' ':
+	    cycle_selection(0, windows, 1);
+	    return 0;
 	}
     }
 
