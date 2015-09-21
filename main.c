@@ -222,10 +222,9 @@ unbuf_stdin()
 }
 
 void
-cycle_selection(int direction,  xcb_window_t *windows, int select)
+cycle_selection(int direction,  int wn, xcb_window_t *windows, int select)
 {
-    char *wname, *wclass;
-    int wn = sizeof(windows);
+    char *wname, *wclass = 0;
     int i = 0;
     
     // Clear terminal
@@ -260,7 +259,7 @@ cycle_selection(int direction,  xcb_window_t *windows, int select)
 int
 main(int argc, char **argv)
 {
-    xcb_window_t *windows;
+    xcb_window_t *windows = 0;
     char ch = 0;
     int wn = 0;
     
@@ -277,24 +276,24 @@ main(int argc, char **argv)
     }
 
     // Invocation
-    cycle_selection(0, windows, 0);
+    cycle_selection(0, wn, windows, 0);
     
     // Cycle window selection when TAB or ` is pressed
     while (1) {
 	ch = fgetc(stdin);
 	switch (ch) {
 	case '\t':
-	    cycle_selection(DOWN, windows, 0);
+	    cycle_selection(DOWN, wn, windows, 0);
 	    break;
 	case '`':
-	    cycle_selection(UP, windows, 0);
+	    cycle_selection(UP, wn, windows, 0);
 	    break;
 	case ' ':
-	    cycle_selection(0, windows, 1);
+	    cycle_selection(0, wn, windows, 1);
 	    return 0;
 	}
     }
-
+    
     free(windows);
     xcb_disconnect(conn);
 }
