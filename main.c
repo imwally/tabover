@@ -13,7 +13,6 @@ static xcb_connection_t *conn;
 static xcb_screen_t *scrn;
 static int selection = 0;
 
-
 void
 init_xcb(xcb_connection_t **con)
 {
@@ -297,4 +296,3 @@ main(int argc, char **argv)
     free(windows);
     xcb_disconnect(conn);
 }
-
