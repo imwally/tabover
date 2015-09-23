@@ -6,8 +6,8 @@
 #include <xcb/xcb.h>
 #include <xcb/xcb_atom.h>
 
-#define DOWN 1
-#define UP  -1
+#define NEXT 1
+#define PREV -1
 
 static xcb_connection_t *conn;
 static xcb_screen_t *scrn;
@@ -217,7 +217,6 @@ unbuf_stdin()
     if (-1 == tcsetattr(0, TCSAFLUSH, &t)) {
 	return -1;
     }
-    
 }
 
 void
@@ -233,9 +232,10 @@ cycle_selection(int direction,  int wn, xcb_window_t *windows, int select)
     selection += direction;
 
     if (select) {
-	int desktop = desktop_of_window(windows[selection]);
+	xcb_window_t w = windows[selection];	
+	int desktop = desktop_of_window(w);
 	switch_to_desktop(desktop);
-	focus_window(windows[selection]);
+	focus_window(w);
     }
 
     if (selection >= wn) {
@@ -282,10 +282,10 @@ main(int argc, char **argv)
 	ch = fgetc(stdin);
 	switch (ch) {
 	case '\t':
-	    cycle_selection(DOWN, wn, windows, 0);
+	    cycle_selection(NEXT, wn, windows, 0);
 	    break;
 	case '`':
-	    cycle_selection(UP, wn, windows, 0);
+	    cycle_selection(PREV, wn, windows, 0);
 	    break;
 	case ' ':
 	    cycle_selection(0, wn, windows, 1);
