@@ -223,7 +223,7 @@ void
 cycle_selection(int direction,  int wn, xcb_window_t *windows, int select)
 {
     char *wname, *wclass = 0;
-    int i = 0;
+    int i;
     
     // Clear terminal
     system("clear");
