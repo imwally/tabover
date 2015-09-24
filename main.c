@@ -11,7 +11,7 @@
 
 static xcb_connection_t *conn;
 static xcb_screen_t *scrn;
-static int selection = 0;
+static int wsel = 0;
 
 void
 init_xcb(xcb_connection_t **con)
@@ -194,7 +194,6 @@ focus_window(xcb_window_t window)
     send_client_message(conn, mask, scrn->root, window,
 			get_atom("_NET_ACTIVE_WINDOW"), data);
 
-       
     xcb_flush(conn);
 }
 
@@ -220,7 +219,7 @@ unbuf_stdin()
 }
 
 void
-cycle_selection(int direction,  int wn, xcb_window_t *windows, int select)
+cycle_selection(int direction, int wn, xcb_window_t *windows, int select)
 {
     char *wname, *wclass = 0;
     int i;
@@ -229,24 +228,25 @@ cycle_selection(int direction,  int wn, xcb_window_t *windows, int select)
     system("clear");
 
     // Increment or decrement selection based on direction
-    selection += direction;
+    wsel += direction;
 
     if (select) {
-	xcb_window_t w = windows[selection];	
+	xcb_window_t w = windows[wsel];	
 	int desktop = desktop_of_window(w);
 	switch_to_desktop(desktop);
 	focus_window(w);
     }
 
-    if (selection >= wn) {
-	selection = 0;
+    if (wsel >= wn) {
+	wsel = 0;
     }
-    if (selection < 0) {
-	selection = wn-1;
+    
+    if (wsel < 0) {
+	wsel = wn-1;
     }
         
     for (i = 0; i < wn; i++) {
-	if (selection == i) {
+	if (wsel == i) {
 	    printf("> ");
 	}
 	wclass = window_class(windows[i]);
