@@ -12,6 +12,7 @@
 static xcb_connection_t *conn;
 static xcb_screen_t *scrn;
 static int wsel = 0;
+static struct termios torig;
 
 void
 init_xcb(xcb_connection_t **con)
@@ -216,6 +217,18 @@ unbuf_stdin()
     if (-1 == tcsetattr(0, TCSAFLUSH, &t)) {
 	return -1;
     }
+
+    return 0;
+}
+
+int
+buf_stdin()
+{
+    if (-1 == tcsetattr(0, TCSAFLUSH, &torig)) {
+	return -1;
+    }
+
+    return 0;
 }
 
 void
@@ -269,6 +282,11 @@ main(int argc, char **argv)
     // Get a list of windows via _NET_CLIENT_LIST of the root screen
     wn = client_list(scrn->root, &windows);
 
+    // Save original stdin into torig
+    if (-1 == tcgetattr(0, &torig)) {
+	perror("tcgetattr");
+    }
+    
     // Unbuffer terminal input to watch for key presses
     if (unbuf_stdin()) {
 	perror("can't unbuffer terminal");
@@ -289,9 +307,14 @@ main(int argc, char **argv)
 	    break;
 	case ' ':
 	    cycle_selection(0, wn, windows, 1);
-	    return 0;
+	    // Buffer terminal input
+	    if (buf_stdin()) {
+		perror("buffer input");
+	    }
+    	    return 0;
 	}
     }
+
     
     free(windows);
     xcb_disconnect(conn);
