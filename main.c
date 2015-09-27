@@ -310,11 +310,11 @@ main(int argc, char **argv)
 	    if (buf_stdin()) {
 		perror("buffer input");
 	    }
+	    
+	    free(windows);
+	    xcb_disconnect(conn);
     	    return 0;
 	}
     }
-
     
-    free(windows);
-    xcb_disconnect(conn);
 }
