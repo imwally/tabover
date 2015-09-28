@@ -281,7 +281,7 @@ main(int argc, char **argv)
     // Get a list of windows via _NET_CLIENT_LIST of the root screen
     wn = client_list(scrn->root, &windows);
 
-    // Save original stdin into torig
+    // Save original stdin settings into torig
     if (-1 == tcgetattr(0, &torig)) {
 	perror("tcgetattr");
     }
