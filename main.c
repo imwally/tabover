@@ -13,6 +13,41 @@ static xcb_screen_t *scrn;
 static int wsel = 0;
 static struct termios torig;
 
+const uint32_t mask = (XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT |
+		       XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY);
+int
+unbuf_stdin() 
+{
+    struct termios t;
+    
+    if (-1 == tcgetattr(0, &t)) {
+	perror("tcgetattr");
+    }
+
+    t.c_lflag &= ~(ICANON | ECHO);
+    t.c_lflag |= ISIG;
+    t.c_iflag &= ~ICRNL;
+
+    t.c_cc[VMIN] = 1; 
+    t.c_cc[VTIME] = 0;
+
+    if (-1 == tcsetattr(0, TCSAFLUSH, &t)) {
+	return -1;
+    }
+
+    return 0;
+}
+
+int
+buf_stdin()
+{
+    if (-1 == tcsetattr(0, TCSAFLUSH, &torig)) {
+	return -1;
+    }
+
+    return 0;
+}
+
 void
 init_xcb(xcb_connection_t **con)
 {
@@ -52,61 +87,33 @@ get_atom(char *name)
 }
 
 char *
-window_class(xcb_window_t w)
+get_prop_string(xcb_atom_t atom, xcb_window_t w)
 {
     xcb_get_property_cookie_t c;
     xcb_get_property_reply_t *r;
-    char *class = 0;
+    char *string = 0;
 
-    c = xcb_get_property(conn, 0, w,
-			 XCB_ATOM_WM_CLASS,
-			 XCB_ATOM_STRING,
-			 0L, 32L);
+    c = xcb_get_property(conn, 0, w, atom, XCB_ATOM_STRING, 0L, 32L);
     r = xcb_get_property_reply(conn, c, NULL);
 
     if (r) {
-	class = (char *) xcb_get_property_value(r);
+	string = (char *) xcb_get_property_value(r);
     }
 
     free(r);
-    return class;
+    return string;
 }
 
-char *
-window_name(xcb_window_t w)
-{
-    xcb_get_property_cookie_t c;
-    xcb_get_property_reply_t *r;
-    char *name = 0;
-
-    c = xcb_get_property(conn, 0, w,
-			 XCB_ATOM_WM_NAME,
-			 XCB_ATOM_STRING,
-			 0L, 32L);
-    r = xcb_get_property_reply(conn, c, NULL);
-
-    if (r) {
-	name = (char *) xcb_get_property_value(r);
-    }
-
-    free(r);
-    return name;
-}
-
-uint32_t
+int
 desktop_of_window(xcb_window_t w)
 {
     xcb_get_property_cookie_t c;
     xcb_get_property_reply_t *r;
-    xcb_atom_t atom = 0;
     int desktop = 0;
 
-    atom = get_atom("_NET_WM_DESKTOP");
+    xcb_atom_t atom = get_atom("_NET_WM_DESKTOP");
     
-    c = xcb_get_property(conn, 0, w,
-			 atom,
-			 XCB_ATOM_CARDINAL,
-			 0, 1);
+    c = xcb_get_property(conn, 0, w, atom, XCB_ATOM_CARDINAL, 0, 1);
     r = xcb_get_property_reply(conn, c, NULL);
 
     if (r) {
@@ -122,15 +129,11 @@ client_list(xcb_window_t w, xcb_window_t **windows)
 {
     xcb_get_property_cookie_t c;
     xcb_get_property_reply_t *r;
-    xcb_atom_t atom = 0;
     int wn = 0;
 
-    atom = get_atom("_NET_CLIENT_LIST");
+    xcb_atom_t atom = get_atom("_NET_CLIENT_LIST");
     
-    c = xcb_get_property(conn, 0, w,
-			 atom,
-			 XCB_ATOM_WINDOW,
-			 0L, 32L);
+    c = xcb_get_property(conn, 0, w, atom, XCB_ATOM_WINDOW, 0L, 32L);
     r = xcb_get_property_reply(conn, c, NULL);
 
     if (r) {
@@ -144,8 +147,7 @@ client_list(xcb_window_t w, xcb_window_t **windows)
 }
 
 void
-send_client_message(xcb_connection_t *con, uint32_t mask,
-		    xcb_window_t destination, xcb_window_t window,
+send_client_message(uint32_t mask, xcb_window_t destination, xcb_window_t window,
 		    xcb_atom_t message, const uint32_t data[])
 {
     xcb_client_message_event_t event;
@@ -161,22 +163,17 @@ send_client_message(xcb_connection_t *con, uint32_t mask,
 	event.data.data32[i] = data[i];
     }
 
-    xcb_send_event(con, 0, destination, mask, (const char *) &event);
+    xcb_send_event(conn, 0, destination, mask, (const char *) &event);
 
 }
 
 void
 switch_to_desktop(int desktop)
 {
-    uint32_t data[5] = {
-	(uint32_t)desktop, 0, 0, 0, 0
-    };
+    xcb_atom_t atom = get_atom("_NET_CURRENT_DESKTOP");
+    uint32_t data[5] = {desktop, 0, 0, 0, 0};
     
-    uint32_t mask = (XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT |
-		     XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY);
-    
-    send_client_message(conn, mask, scrn->root, scrn->root,
-			get_atom("_NET_CURRENT_DESKTOP"), data);
+    send_client_message(mask, scrn->root, scrn->root, atom, data);
 
     xcb_flush(conn);
 }
@@ -184,58 +181,20 @@ switch_to_desktop(int desktop)
 void
 focus_window(xcb_window_t window)
 {
-    uint32_t data[5] = {
-	2L, 0, 0, 0, 0
-    };
-    
-    uint32_t mask = (XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT |
-		     XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY);
-    
-    send_client_message(conn, mask, scrn->root, window,
-			get_atom("_NET_ACTIVE_WINDOW"), data);
+    xcb_atom_t atom = get_atom("_NET_ACTIVE_WINDOW");
+    uint32_t data[5] = {2, 0, 0, 0, 0};
+
+    send_client_message(mask, scrn->root, window, atom, data);
 
     xcb_flush(conn);
 }
 
-int
-unbuf_stdin() 
-{
-    struct termios t;
-    
-    if (-1 == tcgetattr(0, &t)) {
-	perror("tcgetattr");
-    }
-
-    t.c_lflag &= ~(ICANON | ECHO);
-    t.c_lflag |= ISIG;
-    t.c_iflag &= ~ICRNL;
-
-    t.c_cc[VMIN] = 1; 
-    t.c_cc[VTIME] = 0;
-
-    if (-1 == tcsetattr(0, TCSAFLUSH, &t)) {
-	return -1;
-    }
-
-    return 0;
-}
-
-int
-buf_stdin()
-{
-    if (-1 == tcsetattr(0, TCSAFLUSH, &torig)) {
-	return -1;
-    }
-
-    return 0;
-}
 
 void
-activate_window(xcb_window_t window)
+select_window(xcb_window_t window)
 {
-	int desktop = desktop_of_window(window);
-	switch_to_desktop(desktop);
-	focus_window(window);
+    switch_to_desktop(desktop_of_window(window));
+    focus_window(window);
 }
 
 void
@@ -244,14 +203,12 @@ cycle_selection(int direction, int wn, xcb_window_t *windows, int select)
     char *wname, *wclass = 0;
     int i;
     
-    // Clear terminal
     system("clear");
 
-    // Increment or decrement selection based on direction
     wsel += direction;
 
     if (select) {
-	activate_window(windows[wsel]);
+	select_window(windows[wsel]);
     }
 
     if (wsel >= wn) {
@@ -266,8 +223,8 @@ cycle_selection(int direction, int wn, xcb_window_t *windows, int select)
 	if (wsel == i) {
 	    printf("> ");
 	}
-	wclass = window_class(windows[i]);
-	wname = window_name(windows[i]);
+	wclass = get_prop_string(XCB_ATOM_WM_CLASS, windows[i]);
+	wname  = get_prop_string(XCB_ATOM_WM_NAME, windows[i]);
 	printf(" [%s] %s\n", wclass, wname);
     }
 }
