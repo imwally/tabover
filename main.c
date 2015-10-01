@@ -231,6 +231,14 @@ buf_stdin()
 }
 
 void
+activate_window(xcb_window_t window)
+{
+	int desktop = desktop_of_window(window);
+	switch_to_desktop(desktop);
+	focus_window(window);
+}
+
+void
 cycle_selection(int direction, int wn, xcb_window_t *windows, int select)
 {
     char *wname, *wclass = 0;
@@ -243,10 +251,7 @@ cycle_selection(int direction, int wn, xcb_window_t *windows, int select)
     wsel += direction;
 
     if (select) {
-	xcb_window_t w = windows[wsel];	
-	int desktop = desktop_of_window(w);
-	switch_to_desktop(desktop);
-	focus_window(w);
+	activate_window(windows[wsel]);
     }
 
     if (wsel >= wn) {
