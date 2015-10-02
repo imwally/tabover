@@ -189,7 +189,6 @@ focus_window(xcb_window_t window)
     xcb_flush(conn);
 }
 
-
 void
 select_window(xcb_window_t window)
 {
@@ -221,7 +220,7 @@ cycle_selection(int direction, int wn, xcb_window_t *windows, int select)
         
     for (i = 0; i < wn; i++) {
 	if (wsel == i) {
-	    printf("> ");
+	    printf(">");
 	}
 	wclass = get_prop_string(XCB_ATOM_WM_CLASS, windows[i]);
 	wname  = get_prop_string(XCB_ATOM_WM_NAME, windows[i]);
