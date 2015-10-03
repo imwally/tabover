@@ -197,11 +197,24 @@ select_window(xcb_window_t window)
 }
 
 void
-cycle_selection(int direction, int wn, xcb_window_t *windows, int select)
+print_selection(int wn, xcb_window_t *windows, int wsel)
 {
     char *wname, *wclass = 0;
     int i;
     
+    for (i = 0; i < wn; i++) {
+	if (wsel == i) {
+	    printf(">");
+	}
+	wclass = get_prop_string(XCB_ATOM_WM_CLASS, windows[i]);
+	wname  = get_prop_string(XCB_ATOM_WM_NAME, windows[i]);
+	printf(" [%s] %s\n", wclass, wname);
+    }
+}
+  
+void
+cycle_selection(int direction, int wn, xcb_window_t *windows, int select)
+{
     system("clear");
 
     wsel += direction;
@@ -217,15 +230,8 @@ cycle_selection(int direction, int wn, xcb_window_t *windows, int select)
     if (wsel < 0) {
 	wsel = wn-1;
     }
-        
-    for (i = 0; i < wn; i++) {
-	if (wsel == i) {
-	    printf(">");
-	}
-	wclass = get_prop_string(XCB_ATOM_WM_CLASS, windows[i]);
-	wname  = get_prop_string(XCB_ATOM_WM_NAME, windows[i]);
-	printf(" [%s] %s\n", wclass, wname);
-    }
+
+    print_selection(wn, windows, wsel);
 }
 
 int
