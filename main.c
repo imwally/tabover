@@ -147,7 +147,7 @@ client_list(xcb_window_t w, xcb_window_t **windows)
 }
 
 void
-send_client_message(uint32_t mask, xcb_window_t destination, xcb_window_t window,
+send_client_message(xcb_window_t destination, xcb_window_t window,
 		    xcb_atom_t message, const uint32_t data[])
 {
     xcb_client_message_event_t event;
@@ -173,7 +173,7 @@ switch_to_desktop(int desktop)
     xcb_atom_t atom = get_atom("_NET_CURRENT_DESKTOP");
     uint32_t data[5] = {desktop, 0, 0, 0, 0};
     
-    send_client_message(mask, scrn->root, scrn->root, atom, data);
+    send_client_message(scrn->root, scrn->root, atom, data);
 
     xcb_flush(conn);
 }
@@ -184,7 +184,7 @@ focus_window(xcb_window_t window)
     xcb_atom_t atom = get_atom("_NET_ACTIVE_WINDOW");
     uint32_t data[5] = {2, 0, 0, 0, 0};
 
-    send_client_message(mask, scrn->root, window, atom, data);
+    send_client_message(scrn->root, window, atom, data);
 
     xcb_flush(conn);
 }
