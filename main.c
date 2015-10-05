@@ -48,24 +48,30 @@ buf_stdin()
     return 0;
 }
 
-void
+int
 init_xcb(xcb_connection_t **con)
 {
     *con = xcb_connect(NULL, NULL);
     
     if (xcb_connection_has_error(*con)) {
 	perror("unable to connect to the X server");
+	return -1;
     }
+
+    return 0;
 }
 
-void
+int
 get_screen(xcb_connection_t *con, xcb_screen_t **scr)
 {
     *scr = xcb_setup_roots_iterator(xcb_get_setup(con)).data;
     
     if (*scr == NULL) {
 	perror("unable to retrieve screen information");
+	return -1;
     }
+
+    return 0;
 }
 
 xcb_atom_t
@@ -93,7 +99,7 @@ get_prop_string(xcb_atom_t atom, xcb_window_t w)
     xcb_get_property_reply_t *r;
     char *string = 0;
 
-    c = xcb_get_property(conn, 0, w, atom, XCB_ATOM_STRING, 0L, 32L);
+    c = xcb_get_property(conn, 0, w, atom, XCB_ATOM_STRING, 0, 32);
     r = xcb_get_property_reply(conn, c, NULL);
 
     if (r) {
@@ -251,11 +257,13 @@ main(int argc, char **argv)
     // Save original stdin settings into torig
     if (-1 == tcgetattr(0, &torig)) {
 	perror("tcgetattr");
+	return -1;
     }
     
     // Unbuffer terminal input to watch for key presses
     if (unbuf_stdin()) {
 	perror("can't unbuffer terminal");
+	return -1;
     }
 
     // Invocation
@@ -271,9 +279,9 @@ main(int argc, char **argv)
 	case '`':
 	    cycle_selection(PREV, wn, windows, 0);
 	    break;
-	case ' ':
+	case '\r':
 	    cycle_selection(0, wn, windows, 1);
-	    // Buffer terminal input
+	    // Return orginal terminal settings
 	    if (buf_stdin()) {
 		perror("buffer input");
 	    }
@@ -283,5 +291,4 @@ main(int argc, char **argv)
     	    return 0;
 	}
     }
-    
 }
