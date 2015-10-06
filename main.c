@@ -266,10 +266,11 @@ main(int argc, char **argv)
 	return -1;
     }
 
-    // Invocation
+    // Invocation: start window selection at zero, or the first window
     cycle_selection(0, wn, windows, 0);
     
-    // Cycle window selection when TAB or ` is pressed
+    // Cycle window selection when TAB or ` is pressed and activate
+    // window on return
     while (1) {
 	ch = fgetc(stdin);
 	switch (ch) {
@@ -285,7 +286,6 @@ main(int argc, char **argv)
 	    if (buf_stdin()) {
 		perror("buffer input");
 	    }
-	    
 	    free(windows);
 	    xcb_disconnect(conn);
     	    return 0;
