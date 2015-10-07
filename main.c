@@ -277,8 +277,17 @@ main(int argc, char **argv)
 	case '\t':
 	    cycle_selection(NEXT, wn, windows, 0);
 	    break;
+	case 'j':
+	    cycle_selection(NEXT, wn, windows, 0);
+	    break;
 	case '`':
 	    cycle_selection(PREV, wn, windows, 0);
+	    break;
+	case 'k':
+	    cycle_selection(PREV, wn, windows, 0);
+	    break;
+	case 'q':
+	    return 0;
 	    break;
 	case '\r':
 	    cycle_selection(0, wn, windows, 1);
