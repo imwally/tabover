@@ -10,6 +10,7 @@
 
 static xcb_connection_t *conn;
 static xcb_screen_t *scrn;
+static xcb_window_t *ws;
 static int wsel = 0;
 static struct termios torig;
 
@@ -240,10 +241,21 @@ cycle_selection(int direction, int wn, xcb_window_t *windows, int select)
     print_selection(wn, windows, wsel);
 }
 
+void
+cleanup()
+{
+    // Return orginal terminal settings
+    if (buf_stdin()) {
+	perror("buffer input");
+    }
+    
+    free(ws);
+    xcb_disconnect(conn);
+}
+
 int
 main(int argc, char **argv)
 {
-    xcb_window_t *windows = 0;
     char ch = 0;
     int wn = 0;
     
@@ -252,7 +264,7 @@ main(int argc, char **argv)
     get_screen(conn, &scrn);
 
     // Get a list of windows via _NET_CLIENT_LIST of the root screen
-    wn = client_list(scrn->root, &windows);
+    wn = client_list(scrn->root, &ws);
 
     // Save original stdin settings into torig
     if (-1 == tcgetattr(0, &torig)) {
@@ -267,7 +279,7 @@ main(int argc, char **argv)
     }
 
     // Invocation: start window selection at zero, or the first window
-    cycle_selection(0, wn, windows, 0);
+    cycle_selection(0, wn, ws, 0);
     
     // Cycle window selection when TAB or ` is pressed and activate
     // window on return
@@ -275,29 +287,24 @@ main(int argc, char **argv)
 	ch = fgetc(stdin);
 	switch (ch) {
 	case '\t':
-	    cycle_selection(NEXT, wn, windows, 0);
+	    cycle_selection(NEXT, wn, ws, 0);
 	    break;
 	case 'j':
-	    cycle_selection(NEXT, wn, windows, 0);
+	    cycle_selection(NEXT, wn, ws, 0);
 	    break;
 	case '`':
-	    cycle_selection(PREV, wn, windows, 0);
+	    cycle_selection(PREV, wn, ws, 0);
 	    break;
 	case 'k':
-	    cycle_selection(PREV, wn, windows, 0);
+	    cycle_selection(PREV, wn, ws, 0);
 	    break;
 	case 'q':
+	    cleanup();
 	    return 0;
-	    break;
 	case '\r':
-	    cycle_selection(0, wn, windows, 1);
-	    // Return orginal terminal settings
-	    if (buf_stdin()) {
-		perror("buffer input");
-	    }
-	    free(windows);
-	    xcb_disconnect(conn);
-    	    return 0;
+	    cycle_selection(0, wn, ws, 1);
+	    cleanup();
+	    return 0;
 	}
     }
 }
