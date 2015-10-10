@@ -206,17 +206,26 @@ select_window(xcb_window_t window)
 void
 print_selection(int wn, xcb_window_t *windows, int wsel)
 {
-    char *wname, *wclass = 0;
+    char *wname, *wclass, *winstance = 0;
     int wdesktop, i = 0;
     
     for (i = 0; i < wn; i++) {
 	if (wsel == i) {
 	    printf(">");
 	}
-	wdesktop = desktop_of_window(windows[i])+1;
-	wclass = get_prop_string(XCB_ATOM_WM_CLASS, windows[i]);
-	wname  = get_prop_string(XCB_ATOM_WM_NAME, windows[i]);
-	printf(" %d: [%s] %s\n", wdesktop, wclass, wname);
+	
+	wclass    = get_prop_string(XCB_ATOM_WM_CLASS, windows[i]);
+	winstance = &wclass[strlen(wclass)+1];
+	wdesktop  = desktop_of_window(windows[i])+1;
+	wname     = get_prop_string(XCB_ATOM_WM_NAME, windows[i]);
+	
+	printf(" %d: ", wdesktop);
+	if (winstance != "") {
+	    printf("[%s] ", winstance);
+	} else {
+	    printf("[%s] ", wclass);
+	}
+	printf("%s\n", wname);
     }
 }
   
