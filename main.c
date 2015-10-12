@@ -260,8 +260,8 @@ cleanup()
 int
 main(int argc, char **argv)
 {
-    char ch = 0;
-    int wn = 0;
+    char ch = 0; // character pressed
+    int wn = 0;  // number of windows
     
     // Setup connection to X and grab screen
     init_xcb(&conn);
@@ -285,8 +285,8 @@ main(int argc, char **argv)
     // Invocation: start window selection at zero, or the first window
     cycle_selection(0, wn, ws, 0);
     
-    // Cycle window selection when TAB or ` is pressed and activate
-    // window on return
+    // Cycle window selection forward when TAB or j is press and
+    // backwards when ` or k is pressed. Return activates window.
     while (1) {
 	ch = fgetc(stdin);
 	switch (ch) {
