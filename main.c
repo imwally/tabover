@@ -199,8 +199,9 @@ focus_window(xcb_window_t window)
 void
 select_window(xcb_window_t window)
 {
-    switch_to_desktop(desktop_of_window(window));
+    int desktop = desktop_of_window(window);
     focus_window(window);
+    switch_to_desktop(desktop);
 }
 
 void
