@@ -8,11 +8,11 @@
 #define NEXT 1
 #define PREV -1
 
-static xcb_connection_t *conn;
-static xcb_screen_t *scrn;
-static xcb_window_t *ws;
-static int wsel = 0;
-static struct termios torig;
+static xcb_connection_t *conn; // connection to X
+static xcb_screen_t *scrn;     // main screen
+static xcb_window_t *ws;       // window ids
+static int wsel = 0;           // current selected window
+static struct termios torig;   // original terminal settings
 
 const uint32_t mask = (XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT |
 		       XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY);
