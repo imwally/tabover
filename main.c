@@ -16,6 +16,16 @@ static struct termios torig;   // original terminal settings
 
 const uint32_t mask = (XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT |
 		       XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY);
+
+// maybe hold all of the window information in an array of window
+// structs?
+struct window {
+    xcb_window_t id;
+    char *name;
+    int desktop;
+    int selected;
+};
+
 int
 unbuf_stdin() 
 {
