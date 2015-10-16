@@ -11,6 +11,7 @@
 
 static xcb_connection_t *conn; // connection to X
 static xcb_screen_t *scrn;     // main screen
+
 static const uint32_t mask = (XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT |
 			      XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY);
 
@@ -19,9 +20,12 @@ struct termios torig;   // original terminal settings
 struct window {
     xcb_window_t id;
     char *name;
+    char *instance;
     int desktop;
     int selected;
 };
+
+static struct window *windows;
 
 int
 unbuf_stdin() 
@@ -190,26 +194,6 @@ select_window(xcb_window_t window)
     switch_to_desktop(desktop);
 }
 
-void
-print_selection(int wn, xcb_window_t *windows, int wsel)
-{
-    char *wname, *wclass, *winstance = 0;
-    int wdesktop, i = 0;
-    
-    for (i = 0; i < wn; i++) {
-	if (wsel == i) {
-	    printf(">");
-	}
-	
-	wname     = get_prop_string(XCB_ATOM_WM_NAME, windows[i]);
-	wclass    = get_prop_string(XCB_ATOM_WM_CLASS, windows[i]);
-	winstance = &wclass[strlen(wclass)+1];
-	wdesktop  = desktop_of_window(windows[i])+1;
-
-	printf(" %d: [%s] %s\n", wdesktop, winstance, wname);
-    }
-}
-
 int
 open_windows(xcb_window_t screen)
 {
@@ -217,14 +201,27 @@ open_windows(xcb_window_t screen)
     xcb_get_property_reply_t *r;
     xcb_window_t *client_list;
     int wn = 0;
-
+      
     xcb_atom_t atom = get_atom("_NET_CLIENT_LIST");
     
     c = xcb_get_property(conn, 0, screen, atom, XCB_ATOM_WINDOW, 0L, 32L);
     r = xcb_get_property_reply(conn, c, NULL);
 
     if (r) {
+	wn = r->length;
 	client_list = xcb_get_property_value(r);
+	windows = malloc(sizeof(*windows) * wn);
+
+	for (int i = 0; i < wn; i++) {
+	    xcb_window_t id = client_list[i];
+	    char *wclass = get_prop_string(XCB_ATOM_WM_CLASS, id);
+	    char *name = get_prop_string(XCB_ATOM_WM_NAME, id);
+	    
+	    windows[i].id = id;
+	    windows[i].name = name;
+	    windows[i].desktop = desktop_of_window(id)+1;
+	    windows[i].instance = &wclass[strlen(wclass)+1];
+	}
     }
     
     free(r);
@@ -245,18 +242,21 @@ cleanup()
 int
 main(int argc, char **argv)
 {
+    int wn = 0;  // number of windows open
     char ch = 0; // character pressed
-    int wn = 0;  // number of windows
-    
+
     // Setup connection to X and grab screen
     init_xcb(&conn);
     get_screen(conn, &scrn);
 
     // Get a list of open windows via _NET_CLIENT_LIST of the root
     // screen
-    struct window *windows;
-    windows = open_windows(scrn->root);
+    wn = open_windows(scrn->root);
 
+    for (int i = 0; i < wn; i++) {
+	printf("%d: %s\n", windows[i].desktop, windows[i].name);
+    }
+    
     // Save original stdin settings into torig
     if (-1 == tcgetattr(0, &torig)) {
 	perror("tcgetattr");
