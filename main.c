@@ -25,8 +25,6 @@ struct window {
     int selected;
 };
 
-static struct window *windows;
-
 int
 unbuf_stdin() 
 {
@@ -195,7 +193,7 @@ select_window(xcb_window_t window)
 }
 
 int
-open_windows(xcb_window_t screen)
+open_windows(xcb_window_t screen, struct window **windows)
 {
     xcb_get_property_cookie_t c;
     xcb_get_property_reply_t *r;
@@ -210,17 +208,20 @@ open_windows(xcb_window_t screen)
     if (r) {
 	wn = r->length;
 	client_list = xcb_get_property_value(r);
-	windows = malloc(sizeof(*windows) * wn);
+	*windows = malloc(sizeof(struct window) * wn);
 
-	for (int i = 0; i < wn; i++) {
+	for (int i = 0; i < wn; ++i) {
 	    xcb_window_t id = client_list[i];
 	    char *wclass = get_prop_string(XCB_ATOM_WM_CLASS, id);
 	    char *name = get_prop_string(XCB_ATOM_WM_NAME, id);
-	    
-	    windows[i].id = id;
-	    windows[i].name = name;
-	    windows[i].desktop = desktop_of_window(id)+1;
-	    windows[i].instance = &wclass[strlen(wclass)+1];
+	    int desktop = desktop_of_window(id)+1;
+
+	    windows[i] = malloc(sizeof(struct window));
+	    windows[i]->id = id;
+	    windows[i]->name = name;
+	    windows[i]->desktop = desktop;
+	    windows[i]->instance = &wclass[strlen(wclass)+1];
+	    windows[i]->selected = 0;
 	}
     }
     
@@ -251,11 +252,8 @@ main(int argc, char **argv)
 
     // Get a list of open windows via _NET_CLIENT_LIST of the root
     // screen
-    wn = open_windows(scrn->root);
-
-    for (int i = 0; i < wn; i++) {
-	printf("%d: %s\n", windows[i].desktop, windows[i].name);
-    }
+    struct window *windows;
+    wn = open_windows(scrn->root, &windows);
     
     // Save original stdin settings into torig
     if (-1 == tcgetattr(0, &torig)) {
