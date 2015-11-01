@@ -14,6 +14,13 @@ has an option to switch between windows on all desktops but not in
 most tiling window managers. tabover fills that missing role for
 tiling WMs.
 
+## Usage
+
+* `Tab` or `j` select next
+* `~` or `k` select previous
+* `Return` activate window
+* `q` quit
+
 ## Requirements
 
 * [xcb](http://xcb.freedesktop.org/)
