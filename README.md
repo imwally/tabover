@@ -23,7 +23,9 @@ tiling WMs.
 
 ## Requirements
 
-* [xcb](http://xcb.freedesktop.org/)
+* [xcb](http://xcb.freedesktop.org/) library
 * WM that supports [ewmh](https://en.m.wikipedia.org/wiki/EWMH)
 
+## Build
 
+`gcc -o tabover main.c -lxcb`
