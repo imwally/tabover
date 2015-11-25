@@ -28,4 +28,6 @@ tiling WMs.
 
 ## Build
 
-`gcc -o tabover main.c -lxcb`
+`make`
+
+This will build the `tabover` binary. Place it wherever you please.
